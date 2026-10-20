@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Battle: Colosseum Event Stack & Synergy Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap');
+    
+    .font-cinzel { font-family: 'Cinzel', serif; }
+    body { font-family: 'Inter', sans-serif; background-color: #0b0c10; color: #e0e2ec; }
+    
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0c10; }
+    ::-webkit-scrollbar-thumb { background: #2f3542; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #d97706; }
+    
+    .stat-glow {
+      text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-200">
+
+  <!-- Header -->
+  <header class="border-b border-amber-900/40 bg-gradient-to-r from-stone-950 via-neutral-900 to-stone-950 sticky top-0 z-50 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-inner">
+          <i data-lucide="shield" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="font-cinzel text-lg md:text-xl font-bold tracking-wide text-amber-400">Total Battle Colosseum</h1>
+          <p class="text-xs text-stone-400">Event Stacking & 5v5 Synergy Calculator</p>
+        </div>
+      </div>
+      
+      <!-- Top Action Controls -->
+      <div class="flex items-center space-x-2">
+        <button id="btn-share" class="px-3 py-1.5 rounded bg-stone-800 hover:bg-stone-700 border border-stone-700 text-xs text-stone-200 flex items-center gap-1.5 transition">
+          <i data-lucide="share-2" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Share Setup</span>
+        </button>
+        <button id="btn-copy-card" class="px-3 py-1.5 rounded bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-xs text-amber-300 flex items-center gap-1.5 transition">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Copy Clan Card</span>
+        </button>
+        <button id="btn-reset" class="px-3 py-1.5 rounded bg-red-950/30 hover:bg-red-900/40 border border-red-800/40 text-xs text-red-300 flex items-center gap-1.5 transition">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>Reset</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- KPI / Top Summary Ribbon -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-stone-900/80 border border-stone-800 rounded-xl p-4 flex flex-col justify-between">
+        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Synergy Score</span>
+        <div class="flex items-baseline space-x-2 mt-1">
+          <span id="kpi-synergy" class="text-2xl md:text-3xl font-extrabold text-amber-400 stat-glow font-cinzel">0</span>
+          <span class="text-xs text-stone-500">/ 100</span>
+        </div>
+        <span id="kpi-archetype" class="text-xs text-amber-300/80 mt-1 font-semibold">Configuring...</span>
+      </div>
+
+      <div class="bg-stone-900/80 border border-stone-800 rounded-xl p-4 flex flex-col justify-between">
+        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Troop Effective HP</span>
+        <div class="flex items-baseline space-x-2 mt-1">
+          <span id="kpi-ehp" class="text-2xl md:text-3xl font-extrabold text-emerald-400 font-cinzel">0</span>
+          <span class="text-xs text-stone-500">M HP</span>
+        </div>
+        <span id="kpi-meatshield" class="text-xs text-emerald-400/80 mt-1">Meatshield Ratio: 0%</span>
+      </div>
+
+      <div class="bg-stone-900/80 border border-stone-800 rounded-xl p-4 flex flex-col justify-between">
+        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Est. 2-Round Win Rate</span>
+        <div class="flex items-baseline space-x-2 mt-1">
+          <span id="kpi-winrate" class="text-2xl md:text-3xl font-extrabold text-cyan-400 font-cinzel">50%</span>
+        </div>
+        <span id="kpi-tiebreaker" class="text-xs text-cyan-400/80 mt-1">Tiebreaker Surv: +0%</span>
+      </div>
+
+      <div class="bg-stone-900/80 border border-stone-800 rounded-xl p-4 flex flex-col justify-between">
+        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Stack Point Velocity</span>
+        <div class="flex items-baseline space-x-2 mt-1">
+          <span id="kpi-velocity" class="text-2xl md:text-3xl font-extrabold text-purple-400 font-cinzel">1.0x</span>
+          <span class="text-xs text-stone-500">Mult</span>
+        </div>
+        <span id="kpi-stack-events" class="text-xs text-purple-400/80 mt-1">1 Event Active</span>
+      </div>
+    </section>
+
+    <!-- 2-Column Core Interface -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- LEFT COLUMN: Captains & Troops (7 cols) -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- 1. Captains Selection Section -->
+        <section class="bg-stone-900/70 border border-stone-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4 border-b border-stone-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="crown" class="w-5 h-5 text-amber-400"></i>
+              <h2 class="font-cinzel text-base md:text-lg font-bold text-amber-300">5-Captain Roster & Skill Builds</h2>
+            </div>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-amber-950 border border-amber-800 text-amber-300">
+              5 of 5 Assigned
+            </span>
+          </div>
+
+          <div id="captains-container" class="space-y-4">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </section>
+
+        <!-- 2. Troops & Meatshield Matrix (T1 to T9) -->
+        <section class="bg-stone-900/70 border border-stone-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4 border-b border-stone-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="users" class="w-5 h-5 text-emerald-400"></i>
+              <h2 class="font-cinzel text-base md:text-lg font-bold text-emerald-300">Troop & Monster Stacks (T1 - T9)</h2>
+            </div>
+            <span class="text-xs text-stone-400">Round 1 & 2 Meatshield Buffer</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Infantry / Spearmen (Guardsmen Meatshield) -->
+            <div class="bg-stone-950/60 p-3.5 rounded-lg border border-stone-800/80">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-semibold text-stone-300 flex items-center gap-1.5">
+                  <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-400"></i> Infantry (Spearmen Buffer)
+                </span>
+                <select id="troop-inf-tier" class="bg-stone-800 text-xs border border-stone-700 rounded px-1.5 py-0.5 text-stone-200">
+                  <option value="1">T1</option>
+                  <option value="2">T2</option>
+                  <option value="3">T3</option>
+                  <option value="4">T4</option>
+                  <option value="5">T5</option>
+                  <option value="6">T6</option>
+                  <option value="7">T7</option>
+                  <option value="8">T8</option>
+                  <option value="9" selected>T9 Apex</option>
+                </select>
+              </div>
+              <input type="number" id="troop-inf-count" value="160000" step="5000" min="0" 
+                class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-1.5 text-sm font-mono text-emerald-400 focus:outline-none focus:border-amber-500">
+              <span class="text-[11px] text-stone-500 mt-1 block">Primary damage sponge to delay backline wipes.</span>
+            </div>
+
+            <!-- Ranged Units -->
+            <div class="bg-stone-950/60 p-3.5 rounded-lg border border-stone-800/80">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-semibold text-stone-300 flex items-center gap-1.5">
+                  <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyan-400"></i> Ranged (Bowmen)
+                </span>
+                <select id="troop-rng-tier" class="bg-stone-800 text-xs border border-stone-700 rounded px-1.5 py-0.5 text-stone-200">
+                  <option value="5">T5</option>
+                  <option value="6">T6</option>
+                  <option value="7">T7</option>
+                  <option value="8">T8</option>
+                  <option value="9" selected>T9 Apex</option>
+                </select>
+              </div>
+              <input type="number" id="troop-rng-count" value="40000" step="2000" min="0" 
+                class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-1.5 text-sm font-mono text-cyan-400 focus:outline-none focus:border-amber-500">
+              <span class="text-[11px] text-stone-500 mt-1 block">Sustained backline armor-piercing damage.</span>
+            </div>
+
+            <!-- Mounted / Cavalry -->
+            <div class="bg-stone-950/60 p-3.5 rounded-lg border border-stone-800/80">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-semibold text-stone-300 flex items-center gap-1.5">
+                  <i data-lucide="zap" class="w-3.5 h-3.5 text-yellow-400"></i> Mounted (Riders)
+                </span>
+                <select id="troop-cav-tier" class="bg-stone-800 text-xs border border-stone-700 rounded px-1.5 py-0.5 text-stone-200">
+                  <option value="5">T5</option>
+                  <option value="6">T6</option>
+                  <option value="7">T7</option>
+                  <option value="8">T8</option>
+                  <option value="9" selected>T9 Apex</option>
+                </select>
+              </div>
+              <input type="number" id="troop-cav-count" value="25000" step="2000" min="0" 
+                class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-1.5 text-sm font-mono text-yellow-400 focus:outline-none focus:border-amber-500">
+              <span class="text-[11px] text-stone-500 mt-1 block">Fast flankers targeting opposing ranged stacks.</span>
+            </div>
+
+            <!-- Epic Monsters -->
+            <div class="bg-stone-950/60 p-3.5 rounded-lg border border-stone-800/80">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-semibold text-stone-300 flex items-center gap-1.5">
+                  <i data-lucide="flame" class="w-3.5 h-3.5 text-red-400"></i> Epic Monsters
+                </span>
+                <select id="troop-mon-type" class="bg-stone-800 text-xs border border-stone-700 rounded px-1.5 py-0.5 text-stone-200">
+                  <option value="phoenix">Solar Phoenix (T7-9)</option>
+                  <option value="kraken">Abyssal Kraken (T8-9)</option>
+                  <option value="gryphon">Storm Gryphon (T7-9)</option>
+                </select>
+              </div>
+              <input type="number" id="troop-mon-count" value="3500" step="250" min="0" 
+                class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-1.5 text-sm font-mono text-red-400 focus:outline-none focus:border-amber-500">
+              <span class="text-[11px] text-stone-500 mt-1 block">High burst cleave units that decide 1-1 tiebreakers.</span>
+            </div>
+          </div>
+
+          <!-- Dragon Companion Setting -->
+          <div class="mt-4 pt-4 border-t border-stone-800 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 rounded bg-red-950/60 border border-red-700/60 flex items-center justify-center text-red-400">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="text-xs font-semibold text-stone-200 block">Dragon Level & Focus</span>
+                <span class="text-[11px] text-stone-400">Fire breath bonus across both battle rounds.</span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <label class="text-xs text-stone-400">Lv:</label>
+              <input type="number" id="dragon-level" min="1" max="300" value="300" class="w-20 bg-stone-800 border border-stone-700 rounded px-2 py-1 text-xs text-amber-400 font-mono text-center">
+              <select id="dragon-skill" class="bg-stone-800 border border-stone-700 text-xs text-stone-300 rounded px-2 py-1">
+                <option value="inferno">Infernal Fire Breath (AoE)</option>
+                <option value="shield">Defensive Ward Roar</option>
+                <option value="speed">Initiative Screech</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Synergy Analysis, Tiebreaker Engine & Event Stacking (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- 3. Dynamic Synergy Breakdown -->
+        <section class="bg-stone-900/70 border border-stone-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center space-x-2 mb-3 border-b border-stone-800 pb-3">
+            <i data-lucide="network" class="w-5 h-5 text-amber-400"></i>
+            <h2 class="font-cinzel text-base font-bold text-amber-300">Synergy & Captain Analysis</h2>
+          </div>
+
+          <!-- Active Pair Synergies Detected -->
+          <div class="space-y-2 mb-4">
+            <span class="text-xs text-stone-400 block font-medium uppercase tracking-wider">Identified Synergies:</span>
+            <div id="synergy-tags" class="flex flex-wrap gap-1.5">
+              <!-- Dynamically rendered badges -->
+            </div>
+          </div>
+
+          <!-- Tactical Feedback Advisory -->
+          <div class="bg-stone-950/70 p-3.5 rounded-lg border border-stone-800 space-y-2 text-xs">
+            <span class="font-semibold text-amber-400 flex items-center gap-1.5">
+              <i data-lucide="compass" class="w-3.5 h-3.5"></i> Squad Assessment:
+            </span>
+            <p id="synergy-notes" class="text-stone-300 leading-relaxed">
+              Evaluating lineup...
+            </p>
+          </div>
+        </section>
+
+        <!-- 4. Official 2-Round Tiebreaker Simulator -->
+        <section class="bg-stone-900/70 border border-stone-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-3 border-b border-stone-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="swords" class="w-5 h-5 text-cyan-400"></i>
+              <h2 class="font-cinzel text-base font-bold text-cyan-300">2-Round Tiebreaker Engine</h2>
+            </div>
+            <span class="text-[10px] text-stone-500 uppercase tracking-wider">Total Battle Rule</span>
+          </div>
+
+          <p class="text-[11px] text-stone-400 mb-3 italic">
+            "The winner is determined by round results. If tied 1-1, the player with the highest proportion of surviving troops in their winning round wins."
+          </p>
+
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-stone-300">Round 1 (As Initiator / Attack):</span>
+                <span id="txt-r1-surv" class="font-mono text-cyan-400">48% Surviving</span>
+              </div>
+              <div class="w-full bg-stone-950 rounded-full h-2.5 overflow-hidden border border-stone-800">
+                <div id="bar-r1-surv" class="bg-gradient-to-r from-cyan-600 to-cyan-400 h-full rounded-full transition-all duration-300" style="width: 48%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-stone-300">Round 2 (As Defender / Counter):</span>
+                <span id="txt-r2-surv" class="font-mono text-cyan-400">3% Surviving</span>
+              </div>
+              <div class="w-full bg-stone-950 rounded-full h-2.5 overflow-hidden border border-stone-800">
+                <div id="bar-r2-surv" class="bg-gradient-to-r from-red-600 to-cyan-400 h-full rounded-full transition-all duration-300" style="width: 3%;"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Event Stacking Multiplier & Forecaster -->
+        <section class="bg-stone-900/70 border border-stone-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-3 border-b border-stone-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="layers" class="w-5 h-5 text-purple-400"></i>
+              <h2 class="font-cinzel text-base font-bold text-purple-300">Event Stacking Planner</h2>
+            </div>
+            <span class="text-xs text-purple-300 font-mono font-bold" id="txt-mult-total">1.0x Points</span>
+          </div>
+
+          <p class="text-xs text-stone-400 mb-3">
+            Check overlapping active events to calculate stacking efficiency and forecast leaderboard point velocity:
+          </p>
+
+          <!-- Checkboxes for Stacking Events -->
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center justify-between p-2 rounded bg-stone-950/60 border border-stone-800 cursor-pointer hover:border-purple-600/40">
+              <span class="flex items-center gap-2">
+                <input type="checkbox" id="evt-colosseum" checked class="rounded border-stone-700 text-purple-600 focus:ring-0">
+                <span class="text-stone-200">Colosseum Tournament Arena</span>
+              </span>
+              <span class="text-stone-500 font-mono text-[11px]">Primary Base</span>
+            </label>
+
+            <label class="flex items-center justify-between p-2 rounded bg-stone-950/60 border border-stone-800 cursor-pointer hover:border-purple-600/40">
+              <span class="flex items-center gap-2">
+                <input type="checkbox" id="evt-might" checked class="rounded border-stone-700 text-purple-600 focus:ring-0">
+                <span class="text-stone-200">Might Progression (Captain Skills / Stars)</span>
+              </span>
+              <span class="text-purple-400 font-mono text-[11px]">+1.75x</span>
+            </label>
+
+            <label class="flex items-center justify-between p-2 rounded bg-stone-950/60 border border-stone-800 cursor-pointer hover:border-purple-600/40">
+              <span class="flex items-center gap-2">
+                <input type="checkbox" id="evt-ragnarok" class="rounded border-stone-700 text-purple-600 focus:ring-0">
+                <span class="text-stone-200">Ragnarok Valor Conversion</span>
+              </span>
+              <span class="text-purple-400 font-mono text-[11px]">+1.30x</span>
+            </label>
+
+            <label class="flex items-center justify-between p-2 rounded bg-stone-950/60 border border-stone-800 cursor-pointer hover:border-purple-600/40">
+              <span class="flex items-center gap-2">
+                <input type="checkbox" id="evt-clan" checked class="rounded border-stone-700 text-purple-600 focus:ring-0">
+                <span class="text-stone-200">Clan Chest Rush Milestones</span>
+              </span>
+              <span class="text-purple-400 font-mono text-[11px]">+0.85x</span>
+            </label>
+          </div>
+
+          <!-- Stacking Multiplier Projections -->
+          <div class="mt-4 pt-3 border-t border-stone-800 flex justify-between items-center text-xs">
+            <span class="text-stone-400">Projected Leaderboard Yield:</span>
+            <span id="txt-projected-points" class="font-mono text-purple-300 font-bold">3.6x Points / Token</span>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Script Logic -->
+  <script>
+    // 12 Total Battle Combat Heroes Data
+    const CAPTAINS = [
+      { id: 'heimdall', name: 'Heimdall', defaultRole: 'Shield / Tank', tier: 'S', baseSpeed: 95, icon: 'shield', color: 'text-amber-400' },
+      { id: 'hercules', name: 'Hercules', defaultRole: 'Main Carry / Burst', tier: 'S', baseSpeed: 88, icon: 'sword', color: 'text-red-400' },
+      { id: 'cleopatra', name: 'Cleopatra', defaultRole: 'Team Buff / Sustain', tier: 'S', baseSpeed: 82, icon: 'heart', color: 'text-emerald-400' },
+      { id: 'beowulf', name: 'Beowulf', defaultRole: 'Sustained Bruiser', tier: 'A', baseSpeed: 85, icon: 'axe', color: 'text-orange-400' },
+      { id: 'skadi', name: 'Skadi', defaultRole: 'CC / Freezing Slow', tier: 'S', baseSpeed: 104, icon: 'snowflake', color: 'text-cyan-400' },
+      { id: 'leonidas', name: 'Leonidas', defaultRole: 'Defensive Frontline', tier: 'A', baseSpeed: 84, icon: 'shield-check', color: 'text-yellow-400' },
+      { id: 'ramses', name: 'Ramses', defaultRole: 'Heavy Burst Cleave', tier: 'A', baseSpeed: 86, icon: 'flame', color: 'text-red-500' },
+      { id: 'logos', name: 'Logos', defaultRole: 'Debuff / Armor Shred', tier: 'B', baseSpeed: 89, icon: 'sparkles', color: 'text-purple-400' },
+      { id: 'ingrid', name: 'Ingrid', defaultRole: 'Attrition Mitigation', tier: 'B', baseSpeed: 80, icon: 'life-buoy', color: 'text-teal-400' },
+      { id: 'aydae', name: 'Aydae', defaultRole: 'Heal & Cleansing', tier: 'B', baseSpeed: 81, icon: 'plus-circle', color: 'text-green-400' },
+      { id: 'artemisia', name: 'Artemisia', defaultRole: 'Ranged Synergy Buff', tier: 'A', baseSpeed: 98, icon: 'target', color: 'text-indigo-400' },
+      { id: 'carter', name: 'Carter', defaultRole: 'Siege / Disruption', tier: 'C', baseSpeed: 75, icon: 'hammer', color: 'text-stone-400' }
+    ];
+
+    // Default Starting 5
+    let currentSquad = [
+      { captainId: 'heimdall', level: 457, stars: 7, skillFocus: 'shield', gearGrade: 'mythic' },
+      { captainId: 'hercules', level: 468, stars: 3, skillFocus: 'burst', gearGrade: 'mythic' },
+      { captainId: 'cleopatra', level: 443, stars: 7, skillFocus: 'support', gearGrade: 'mythic' },
+      { captainId: 'beowulf', level: 400, stars: 3, skillFocus: 'burst', gearGrade: 'mythic' },
+      { captainId: 'skadi', level: 370, stars: 1, skillFocus: 'cc', gearGrade: 'mythic' }
+    ];
+
+    // Build the 5 Captain Selector DOM
+    function renderCaptains() {
+      const container = document.getElementById('captains-container');
+      container.innerHTML = '';
+
+      currentSquad.forEach((slot, index) => {
+        const capt = CAPTAINS.find(c => c.id === slot.captainId) || CAPTAINS[0];
+
+        const card = document.createElement('div');
+        card.className = 'bg-stone-950/70 p-3.5 rounded-lg border border-stone-800/80 hover:border-amber-500/30 transition space-y-3';
+        card.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2.5">
+              <span class="w-5 h-5 rounded-full bg-stone-800 text-stone-300 font-mono text-xs flex items-center justify-center font-bold">
+                ${index + 1}
+              </span>
+              <select class="captain-select bg-stone-900 border border-stone-700 text-sm font-semibold text-amber-300 rounded px-2.5 py-1 focus:outline-none focus:border-amber-500" data-index="${index}">
+                ${CAPTAINS.map(c => `
+                  <option value="${c.id}" ${c.id === slot.captainId ? 'selected' : ''}>
+                    ${c.name} [Tier${c.tier}]
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-stone-400">Star Rating:</span>
+              <select class="star-select bg-stone-900 border border-stone-700 text-xs text-amber-400 font-bold rounded px-2 py-1" data-index="${index}">
+                ${[1,2,3,4,5,6,7].map(s => `<option value="${s}" ${s === slot.stars ? 'selected' : ''}>${s}★</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+            <div>
+              <div class="flex justify-between mb-1 text-stone-400">
+                <span>Captain Level</span>
+                <span class="font-mono text-amber-300 font-bold" id="lbl-lvl-${index}">Lv ${slot.level}</span>
+              </div>
+              <input type="range" min="1" max="500" value="${slot.level}" class="w-full accent-amber-500 level-range" data-index="${index}">
+            </div>
+
+            <div>
+              <label class="block mb-1 text-stone-400">Skill Priority</label>
+              <select class="skill-select w-full bg-stone-900 border border-stone-700 text-stone-300 rounded px-2 py-1 text-xs" data-index="${index}">
+                <option value="cc" ${slot.skillFocus === 'cc' ? 'selected' : ''}>Crowd Control & Stun</option>
+                <option value="burst" ${slot.skillFocus === 'burst' ? 'selected' : ''}>Direct Burst Cleave</option>
+                <option value="shield" ${slot.skillFocus === 'shield' ? 'selected' : ''}>Damage Shield & Armor</option>
+                <option value="support" ${slot.skillFocus === 'support' ? 'selected' : ''}>Team Sustain / Buff</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block mb-1 text-stone-400">Equipment & Relics</label>
+              <select class="gear-select w-full bg-stone-900 border border-stone-700 text-stone-300 rounded px-2 py-1 text-xs" data-index="${index}">
+                <option value="mythic" ${slot.gearGrade === 'mythic' ? 'selected' : ''}>Gold / Mythic Lv 60</option>
+                <option value="purple" ${slot.gearGrade === 'purple' ? 'selected' : ''}>Purple Epic Lv 50-55</option>
+                <option value="blue" ${slot.gearGrade === 'blue' ? 'selected' : ''}>Blue Rare Lv 40-45</option>
+              </select>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      attachListeners();
+      calculateAll();
+    }
+
+    function attachListeners() {
+      document.querySelectorAll('.captain-select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const idx = e.target.dataset.index;
+          currentSquad[idx].captainId = e.target.value;
+          calculateAll();
+        });
+      });
+
+      document.querySelectorAll('.star-select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const idx = e.target.dataset.index;
+          currentSquad[idx].stars = parseInt(e.target.value);
+          calculateAll();
+        });
+      });
+
+      document.querySelectorAll('.level-range').forEach(el => {
+        el.addEventListener('input', (e) => {
+          const idx = e.target.dataset.index;
+          currentSquad[idx].level = parseInt(e.target.value);
+          document.getElementById(`lbl-lvl-${idx}`).textContent = `Lv ${e.target.value}`;
+          calculateAll();
+        });
+      });
+
+      document.querySelectorAll('.skill-select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const idx = e.target.dataset.index;
+          currentSquad[idx].skillFocus = e.target.value;
+          calculateAll();
+        });
+      });
+
+      document.querySelectorAll('.gear-select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const idx = e.target.dataset.index;
+          currentSquad[idx].gearGrade = e.target.value;
+          calculateAll();
+        });
+      });
+
+      // Troops, Dragon and Events listeners
+      const inputs = [
+        'troop-inf-count', 'troop-inf-tier', 'troop-rng-count', 'troop-rng-tier',
+        'troop-cav-count', 'troop-cav-tier', 'troop-mon-count', 'troop-mon-type',
+        'dragon-level', 'dragon-skill', 'evt-colosseum', 'evt-might', 'evt-ragnarok', 'evt-clan'
+      ];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', calculateAll);
+          el.addEventListener('change', calculateAll);
+        }
+      });
+    }
+
+    // Core Calculation & Synergy Engine
+    function calculateAll() {
+      const activeIds = currentSquad.map(s => s.captainId);
+      const uniqueCaptains = new Set(activeIds);
+
+      // 1. Synergy Score Base
+      let synergyScore = 50;
+      let tags = [];
+      let notes = [];
+
+      // Check Duplicates Penalty
+      if (uniqueCaptains.size < 5) {
+        synergyScore -= (5 - uniqueCaptains.size) * 15;
+        notes.push("Duplicate captains detected. In Colosseum, each captain must be unique for balanced activations.");
+      }
+
+      // Check Meta Synergies
+      const hasHeimdall = activeIds.includes('heimdall');
+      const hasHercules = activeIds.includes('hercules');
+      const hasCleo = activeIds.includes('cleopatra');
+      const hasSkadi = activeIds.includes('skadi');
+      const hasBeowulf = activeIds.includes('beowulf');
+      const hasArtemisia = activeIds.includes('artemisia');
+      const hasLeonidas = activeIds.includes('leonidas');
+
+      if (hasHeimdall && hasHercules) {
+        synergyScore += 12;
+        tags.push({ label: 'Heimdall + Hercules (Anchor)', color: 'bg-amber-950 text-amber-300 border-amber-700' });
+      }
+
+      if (hasSkadi) {
+        synergyScore += 10;
+        tags.push({ label: 'Skadi Initiative Freeze', color: 'bg-cyan-950 text-cyan-300 border-cyan-700' });
+      }
+
+      if (hasCleo && (hasHercules || hasBeowulf)) {
+        synergyScore += 8;
+        tags.push({ label: 'Cleopatra Sustain Core', color: 'bg-emerald-950 text-emerald-300 border-emerald-700' });
+      }
+
+      if (hasBeowulf && hasHercules) {
+        synergyScore += 6;
+        tags.push({ label: 'Dual Physical Cleave', color: 'bg-red-950 text-red-300 border-red-700' });
+      }
+
+      if (hasArtemisia) {
+        const rngCount = parseInt(document.getElementById('troop-rng-count').value) || 0;
+        if (rngCount > 30000) {
+          synergyScore += 10;
+          tags.push({ label: 'Artemisia Ranged Surge', color: 'bg-indigo-950 text-indigo-300 border-indigo-700' });
+        }
+      }
+
+      // Star & Gear Multiplier
+      let totalStars = currentSquad.reduce((sum, c) => sum + c.stars, 0);
+      let avgLevel = currentSquad.reduce((sum, c) => sum + c.level, 0) / 5;
+      let mythicGears = currentSquad.filter(c => c.gearGrade === 'mythic').length;
+
+      synergyScore += Math.round((totalStars / 35) * 8);
+      synergyScore += Math.round((mythicGears / 5) * 6);
+      synergyScore = Math.min(100, Math.max(15, synergyScore));
+
+      // Archetype classification
+      let archetype = 'Balanced Core';
+      if (hasHeimdall && hasLeonidas) archetype = 'Ironclad Attrition';
+      else if (hasHercules && hasBeowulf && hasSkadi) archetype = 'Meta Bruiser / Lockdown';
+      else if (activeIds.includes('ramses') && hasHercules) archetype = 'First Strike Burst';
+      else if (!hasHeimdall && !hasLeonidas) archetype = 'Vulnerable Glass Cannon';
+
+      // Troop Effective HP Calculations
+      const infCount = parseInt(document.getElementById('troop-inf-count').value) || 0;
+      const infTier = parseInt(document.getElementById('troop-inf-tier').value) || 9;
+      const rngCount = parseInt(document.getElementById('troop-rng-count').value) || 0;
+      const cavCount = parseInt(document.getElementById('troop-cav-count').value) || 0;
+      const monCount = parseInt(document.getElementById('troop-mon-count').value) || 0;
+
+      // Tier HP coefficients
+      const tierHPMult = { 1: 1, 2: 1.6, 3: 2.5, 4: 4, 5: 6.5, 6: 10, 7: 16, 8: 24, 9: 36 };
+      const rawHP = (infCount * (tierHPMult[infTier] || 36) * 12) +
+                    (rngCount * 280) +
+                    (cavCount * 360) +
+                    (monCount * 4200);
+
+      const dragonLv = parseInt(document.getElementById('dragon-level').value) || 300;
+      const dragonMult = 1 + (dragonLv / 600);
+      const totalEHP = Math.round((rawHP * dragonMult) / 1000000);
+
+      const totalTroops = infCount + rngCount + cavCount + monCount;
+      const meatshieldRatio = totalTroops > 0 ? Math.round((infCount / totalTroops) * 100) : 0;
+
+      // Notes generator
+      if (meatshieldRatio < 45) {
+        notes.push("Infantry meatshield buffer is under 45%. You risk taking direct monster burst to your backline in Round 1.");
+      } else {
+        notes.push("Infantry buffer is healthy (>50%), shielding backline damage dealers across multiple turn rotations.");
+      }
+
+      if (!hasSkadi) {
+        notes.push("Missing Skadi leaves your squad vulnerable to enemy Turn-1 freezes.");
+      } else {
+        notes.push("Skadi initiative speed grants crucial early turn denial against enemy carries.");
+      }
+
+      // Tiebreaker 2-Round Simulation
+      const winPowerBase = (synergyScore * 0.45) + (meatshieldRatio * 0.3) + (avgLevel * 0.05);
+      const estWinRate = Math.min(96, Math.max(12, Math.round(winPowerBase)));
+
+      const r1Surv = Math.min(75, Math.max(5, Math.round((meatshieldRatio * 0.6) + (synergyScore * 0.25))));
+      const r2Surv = Math.min(45, Math.max(1, Math.round(r1Surv * 0.18)));
+
+      // Event Stacking Multipliers
+      let mult = 1.0;
+      let activeEventsCount = 0;
+      if (document.getElementById('evt-colosseum').checked) { mult += 0.0; activeEventsCount++; }
+      if (document.getElementById('evt-might').checked) { mult += 1.75; activeEventsCount++; }
+      if (document.getElementById('evt-ragnarok').checked) { mult += 1.30; activeEventsCount++; }
+      if (document.getElementById('evt-clan').checked) { mult += 0.85; activeEventsCount++; }
+
+      // Update DOM
+      document.getElementById('kpi-synergy').textContent = synergyScore;
+      document.getElementById('kpi-archetype').textContent = archetype;
+      document.getElementById('kpi-ehp').textContent = totalEHP;
+      document.getElementById('kpi-meatshield').textContent = `Meatshield Ratio: ${meatshieldRatio}%`;
+      document.getElementById('kpi-winrate').textContent = `${estWinRate}%`;
+      document.getElementById('kpi-tiebreaker').textContent = `Round 1 Surv: +${r1Surv}%`;
+      document.getElementById('kpi-velocity').textContent = `${mult.toFixed(2)}x`;
+      document.getElementById('kpi-stack-events').textContent = `${activeEventsCount} Active Events`;
+
+      document.getElementById('txt-r1-surv').textContent = `${r1Surv}% Surviving`;
+      document.getElementById('bar-r1-surv').style.width = `${r1Surv}%`;
+      document.getElementById('txt-r2-surv').textContent = `${r2Surv}% Surviving`;
+      document.getElementById('bar-r2-surv').style.width = `${r2Surv}%`;
+
+      document.getElementById('txt-mult-total').textContent = `${mult.toFixed(2)}x Points`;
+      document.getElementById('txt-projected-points').textContent = `${mult.toFixed(2)}x Multiplier Active`;
+
+      // Render tags
+      const tagsContainer = document.getElementById('synergy-tags');
+      tagsContainer.innerHTML = tags.length > 0 ? tags.map(t => `
+        <span class="text-[11px] px-2 py-0.5 rounded-full border ${t.color}">
+          ${t.label}
+        </span>
+      `).join('') : '<span class="text-xs text-stone-500 italic">No major pair synergies active.</span>';
+
+      document.getElementById('synergy-notes').innerHTML = notes.join('<br class="my-1">');
+      
+      lucide.createIcons();
+    }
+
+    // Reset Handler
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      currentSquad = [
+        { captainId: 'heimdall', level: 457, stars: 7, skillFocus: 'shield', gearGrade: 'mythic' },
+        { captainId: 'hercules', level: 468, stars: 3, skillFocus: 'burst', gearGrade: 'mythic' },
+        { captainId: 'cleopatra', level: 443, stars: 7, skillFocus: 'support', gearGrade: 'mythic' },
+        { captainId: 'beowulf', level: 400, stars: 3, skillFocus: 'burst', gearGrade: 'mythic' },
+        { captainId: 'skadi', level: 370, stars: 1, skillFocus: 'cc', gearGrade: 'mythic' }
+      ];
+      document.getElementById('troop-inf-count').value = 160000;
+      document.getElementById('troop-rng-count').value = 40000;
+      document.getElementById('troop-cav-count').value = 25000;
+      document.getElementById('troop-mon-count').value = 3500;
+      document.getElementById('dragon-level').value = 300;
+      document.getElementById('evt-colosseum').checked = true;
+      document.getElementById('evt-might').checked = true;
+      document.getElementById('evt-ragnarok').checked = false;
+      document.getElementById('evt-clan').checked = true;
+      renderCaptains();
+    });
+
+    // Share URL Generator
+    document.getElementById('btn-share').addEventListener('click', () => {
+      const state = {
+        squad: currentSquad,
+        inf: document.getElementById('troop-inf-count').value,
+        rng: document.getElementById('troop-rng-count').value,
+        cav: document.getElementById('troop-cav-count').value,
+        mon: document.getElementById('troop-mon-count').value
+      };
+      const hash = btoa(JSON.stringify(state));
+      window.location.hash = `setup=${hash}`;
+      navigator.clipboard.writeText(window.location.href);
+      alert('Shareable configuration link copied to clipboard!');
+    });
+
+    // Copy Clan Card Format
+    document.getElementById('btn-copy-card').addEventListener('click', () => {
+      const capNames = currentSquad.map(s => {
+        const c = CAPTAINS.find(item => item.id === s.captainId);
+        return `${c.name} (${s.stars}★ Lv${s.level})`;
+      }).join(', ');
+
+      const synergy = document.getElementById('kpi-synergy').textContent;
+      const archetype = document.getElementById('kpi-archetype').textContent;
+      const ehp = document.getElementById('kpi-ehp').textContent;
+      const meatshield = document.getElementById('kpi-meatshield').textContent;
+
+      const card = `⚔️ [TOTAL BATTLE COLOSSEUM SETUP]\n• Roster: ${capNames}\n• Archetype: ${archetype} (Synergy: ${synergy}/100)\n• Defense Buffer: ${ehp}M EHP (${meatshield})\n• Tiebreaker Rule: 1-1 highest surviving troop margin`;
+      navigator.clipboard.writeText(card);
+      alert('Clan War Card copied to clipboard!');
+    });
+
+    // Hash Load handler
+    function loadFromHash() {
+      if (window.location.hash.includes('setup=')) {
+        try {
+          const raw = window.location.hash.split('setup=')[1];
+          const data = JSON.parse(atob(raw));
+          if (data.squad) currentSquad = data.squad;
+          if (data.inf) document.getElementById('troop-inf-count').value = data.inf;
+          if (data.rng) document.getElementById('troop-rng-count').value = data.rng;
+          if (data.cav) document.getElementById('troop-cav-count').value = data.cav;
+          if (data.mon) document.getElementById('troop-mon-count').value = data.mon;
+        } catch (e) {
+          console.error("Could not parse setup hash", e);
+        }
+      }
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      loadFromHash();
+      renderCaptains();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
